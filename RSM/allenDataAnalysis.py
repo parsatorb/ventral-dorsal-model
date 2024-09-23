@@ -16,11 +16,17 @@ from generate_SSM import *
 import matplotlib.pyplot as plt
 import pdb
 
-boc = BrainObservatoryCache()
+boc = BrainObservatoryCache(manifest_file="C:\\Users\\Iced Fractal\\dev\\mouse_contrastive\\brain_observatory\\manifest.json")
 targeted_structures = boc.get_all_targeted_structures()
 imaging_depths = boc.get_all_imaging_depths()
 
-def get_RSM(CreLine = ['Cux2-CreERT2'], TargetedStruct = ['VISp'], ImagingDepth = [175], StimType = 'natural_scenes', downsample_rate = 1, pool_sessions = True):
+def get_RSM(
+        CreLine = ['Cux2-CreERT2'], 
+        TargetedStruct = ['VISp'],
+        ImagingDepth = [175], StimType = 'natural_scenes', downsample_rate = 1, 
+        pool_sessions = True,
+        activation_offset=0,
+        ):
     # get the number of exp containers (length of num_exps) and the number of experiments within each container (each element of num_exps)
     num_exps = get_number_experiments(CreLine = CreLine,TargetedStruct = TargetedStruct, ImagingDepth = ImagingDepth, StimType = StimType)
     num_exp_containers = len(num_exps)
@@ -46,7 +52,7 @@ def get_RSM(CreLine = ['Cux2-CreERT2'], TargetedStruct = ['VISp'], ImagingDepth 
                     activations = get_activations_sg(data_set)
 
                 elif (StimType == 'natural_movie_one')| (StimType == 'natural_movie_two') | (StimType == 'natural_movie_three'):
-                    activations = get_activations_nm(data_set,StimType,downsample_rate, events)
+                    activations = get_activations_nm(data_set,StimType,downsample_rate, events, activation_offset)
 
                 if totalexp == 0:
                     V1_tmp = activations['V1']
@@ -112,7 +118,7 @@ def get_RSM(CreLine = ['Cux2-CreERT2'], TargetedStruct = ['VISp'], ImagingDepth 
                     activations = get_activations_sg(data_set)
 
                 elif (StimType == 'natural_movie_one')| (StimType == 'natural_movie_two') | (StimType == 'natural_movie_three'):
-                    activations = get_activations_nm(data_set,StimType,downsample_rate, events)
+                    activations = get_activations_nm(data_set,StimType,downsample_rate, events, activation_offset)
 
 
                 sim_mats = compute_similarity_matrices(activations)
@@ -121,7 +127,7 @@ def get_RSM(CreLine = ['Cux2-CreERT2'], TargetedStruct = ['VISp'], ImagingDepth 
                 totalexp = totalexp + 1
         
 
-    return all_RSM, noise_ceiling_rsm, noise_ceiling_cka, V1_tmp
+    return all_RSM, noise_ceiling_rsm, noise_ceiling_cka, V1_tmp, activations, data_set, events
 
 def estimate_RSM_noise_ceiling(activations,num_trial):
     # activations is T (number of trials) x M (number of stimuli) x N (number of neurons)
@@ -189,8 +195,7 @@ def get_one_dataset(CreLine = ['Cux2-CreERT2'],TargetedStruct = ['VISp'],Imaging
     
     all_ecs = boc.get_experiment_containers(cre_lines=CreLine,targeted_structures=TargetedStruct,imaging_depths=ImagingDepth)
     all_ec_id = all_ecs[ExpContainerIdx]['id']
-    exp = boc.get_ophys_experiments(experiment_container_ids=[all_ec_id], 
-                                        stimuli=[StimType])[ExpIdx]#
+    exp = boc.get_ophys_experiments(experiment_container_ids=[all_ec_id], stimuli=[StimType])[ExpIdx]#
     data_set = boc.get_ophys_experiment_data(exp['id'])
     events = boc.get_ophys_experiment_events(exp['id'])
     
@@ -331,7 +336,7 @@ def get_activations_natuscene(data_set, events):
     return activations_deconv
 
 
-def get_activations_nm(data_set,which_movie,downsample_rate, events):
+def get_activations_nm(data_set,which_movie,downsample_rate, events, offset=0):
     
     stim_table = data_set.get_stimulus_table(which_movie)
     try:
@@ -355,7 +360,7 @@ def get_activations_nm(data_set,which_movie,downsample_rate, events):
     
         response_tmp = np.empty([max(stim_table.repeat)+1,int(movie_len * downsample_rate)])
         for tr in range(0,max(stim_table.repeat)+1):
-            start_time = stim_table.start[stim_table.repeat == tr] + 0#4
+            start_time = stim_table.start[stim_table.repeat == tr] + offset
             this_cell_resp = sample_cell[start_time]
             if downsample_rate != 1:
                 this_cell_resp_ds = downsample_movie_data(this_cell_resp,downsample_rate)

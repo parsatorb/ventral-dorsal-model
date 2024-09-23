@@ -105,10 +105,7 @@ def compare_reps(model_type = [('CPC','monkeynet','./epoch100.pth.tar')], StimTy
 
             r = np.empty([len(all_RSM_model.keys())-num_ignor_layers,num_sessions])
             for i in range(len(all_RSM_model.keys())-num_ignor_layers):
-                act1 = activations_model[list(all_RSM_model.keys())[i]].mean(1).reshape(activations_model[list(all_RSM_model.keys())[i]].shape[0],-1)
                 conv1 = all_RSM_model[list(all_RSM_model.keys())[i]]
-
-                this_layer_name = list(all_RSM_model.keys())[i]
 
 
                 print(list(all_RSM_model.keys())[i])
@@ -117,7 +114,6 @@ def compare_reps(model_type = [('CPC','monkeynet','./epoch100.pth.tar')], StimTy
                     conv1 = conv1[::subsample_rate,::subsample_rate]
 
                     for j in range(0,num_sessions):
-                        act_tmp = activations.mean(0)
                         RSM_tmp = all_RSM_Allen[:,:,j]
                         r[i,j]=compute_ssm(conv1, RSM_tmp)
             
